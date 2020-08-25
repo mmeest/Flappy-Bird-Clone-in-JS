@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+<!--
+// lisatud lehe taust
+// muudetud mänguvälja(canvas) suurust ning toodud see ekraani keskele
+// lisatud mänguvälja taust
+// mänguvälja piirid tehtud nähtavaks (punane serv)
+// ruudukujulise objekti mõõtmeid muudetud ja vahetatud pildi vastu
+// nupu kujundus muudetud
+// kahe takistuse asemel kolm
+// takistuste värvi ja mõõtmeid muudetud
+// liikuva objekti ekraani ülaservast väljumine takistatud
+// lisatud punktisüsteemi arvutus ja muud kuvatavad andmed 
+// lisatud mängu lõpp 10 000 kaadri täitumisel
+// lisatud mängu lõpus teavitus koos punktisummaga
+// alertbox'i nupp teeb lehele refreshi
+// ka kokkupõrke korral kuvatakse alertbox koos punktisummaga
+// jne. jne.
+-->
+
+<center>
+
+
+<head>
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+	padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+
+    border:2px solid #d12353;
+	
+	background-image: url(bck.jpg);
+}
+
+.button {
+    background-color: yellow; 
+    border: none;
+    color: blue;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 26px;
+    margin: 4px 2px;
+    cursor: pointer;
+}
+
+.button1 {border-radius: 2px;}
+.button2 {border-radius: 4px;}
+.button3 {border-radius: 8px;}
+.button4 {border-radius: 12px;}
+.button5 {border-radius: 50%;}
+ 
+</style>
+
+
+</head>
+
+<body onload="startGame()" background="b01.jpg">
+
+<script>
+// muutujad
+var myGamePiece;
+var myObstacles = [];
+var myScore;
+var myScore2;
+var klick = 0;
+var klick2 = 0;
+var seconds = 0;
+setInterval(function() {
+timer.innerHTML = seconds++;
+}, 1000);
+
+function startGame() {
+	// luuakse uus element/component neljakandiline punast värvi väli mõõtmetega 30x30, asukohaga 10 120
+    // myGamePiece = new component(30, 10, "red", 10, 120);
+	myGamePiece = new component(40, 40, "smiley.gif", 10, 120, "image");
+	
+	
+	// gravitatsioon väärtusega 0.05
+    myGamePiece.gravity = 0.5;
+	// mängu punktid, teksti mõõt ja asukoht
+    myScore = new component("30px", "Consolas", "black", 280, 40, "text");
+	myScore2 = new component("30px", "Consolas", "black", 280, 80, "text");
+	myScore3 = new component("30px", "Consolas", "black", 280, 120, "text");
+	myScore4 = new component("30px", "Consolas", "black", 500, 40, "text");
+	myScore5 = new component("30px", "Consolas", "black", 500, 80, "text");
+	myScore6 = new component("30px", "Consolas", "black", 500, 120, "text");
+	// 
+    myGameArea.start();
+}
+
+// mänguväli mõõtmetega 1000x500
+var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = 1000;
+        this.canvas.height = 500;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.frameNo = 0;
+        this.interval = setInterval(updateGameArea, 30);
+        },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+// gravitatsioon
+function component(width, height, color, x, y, type) {
+    this.type = type;
+	
+	if (type == "image") {
+    this.image = new Image();
+    this.image.src = color;
+	}
+	
+    this.score = 0;
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;    
+	
+    this.x = x;
+    this.y = y;
+    this.gravity = 0;
+    this.gravitySpeed = 0;
+    this.update = function() {
+        ctx = myGameArea.context;
+		
+		
+		// smaili nägu
+		if (type == "image") {
+		ctx.drawImage(this.image,
+        this.x,
+        this.y,
+        this.width, this.height);
+		} else if (this.type == "text") {
+            ctx.font = this.width + " " + this.height;
+            ctx.fillStyle = color;
+            ctx.fillText(this.text, this.x, this.y);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+	// objekti liikumine
+    this.newPos = function() {
+        this.gravitySpeed += this.gravity;
+        this.x += this.speedX;
+        this.y += this.speedY + this.gravitySpeed;
+        this.hitBottom();
+		this.hitTop();
+    }
+	// kui objekt jõuab ekraani alaserva
+    this.hitBottom = function() {
+        var rockbottom = myGameArea.canvas.height - this.height;
+        if (this.y > rockbottom) {
+            this.y = rockbottom;
+            this.gravitySpeed = 0;
+        }
+	}	
+	// kui objekt jõuab ekraani ülaserva
+	this.hitTop = function() {
+        var rocktop = this.height - 40;
+        if (this.y < rocktop) {
+            this.y = rocktop;
+            this.gravitySpeed = 0.5;
+        }
+		
+    }
+	// kokkupõrge objektiga
+    this.crashWith = function(otherobj) {
+        var myleft = this.x;
+        var myright = this.x + (this.width);
+        var mytop = this.y;
+        var mybottom = this.y + (this.height);
+        var otherleft = otherobj.x;
+        var otherright = otherobj.x + (otherobj.width);
+        var othertop = otherobj.y;
+        var otherbottom = otherobj.y + (otherobj.height);
+        var crash = true;
+		if (myGameArea.frameNo == 10000) 		{
+			alert("Palju õnne, mäng sai läbi! \nSinu punktisumma on " + ((myGameArea.frameNo / 10) - (klick2 * 11) + (myObstacles.length * 12)).toFixed(1) + "\nKas soovid uut mängu?");
+			window.location = 'index.html'
+			crash = true;
+		}
+        else if ((mybottom < othertop) || (mytop > otherbottom) || (myright < otherleft) || (myleft > otherright)) {
+            crash = false;
+			
+        }
+		else {
+		alert("Ai-ai. Toimus kokkupõrge! \nSinu punktisumma on " + ((myGameArea.frameNo / 10) - (klick2 * 11) + (myObstacles.length * 12)).toFixed(1) + "\nKas soovid uut mängu?");
+			window.location = 'index.html'
+			crash = true;
+		}
+		
+        return crash;
+    }
+}
+
+
+function updateGameArea() {
+    var x, height, gap, gap2, minHeight, maxHeight, minGap, maxGap;
+    for (i = 0; i < myObstacles.length; i += 1) {
+        if (myGamePiece.crashWith(myObstacles[i])) {
+            return;
+        } 
+    }
+    myGameArea.clear();
+	
+    myGameArea.frameNo += 1;
+    if (myGameArea.frameNo == 1 || everyinterval(150)) {
+        x = myGameArea.canvas.width;
+        minHeight = 20;
+        // maxHeight = 300;
+		maxHeight = 160;
+        height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
+		// takistuste vahe
+        minGap = 70;
+        // maxGap = 240;
+		maxGap = 135
+        gap = Math.floor(Math.random()*(maxGap-minGap+1)+minGap);
+		// ülemine takistus
+        myObstacles.push(new component(15, height, "blue", x, 0));
+		// alumine takistus
+        //myObstacles.push(new component(10, x - height - gap, "yellow", x, height + gap));
+		myObstacles.push(new component(7, height, "black", x, height + gap));
+		gap2 = Math.floor(Math.random()*(maxGap-minGap+1)+minGap*2);
+		myObstacles.push(new component(15, x - height - gap - 30 - gap2, "white", x, height + gap + 30 + gap2));
+    }
+    for (i = 0; i < myObstacles.length; i += 1) {
+        myObstacles[i].x += -1;
+        myObstacles[i].update();
+    }
+	
+	var liikumine
+	if (myGamePiece.gravity == -0.2) { 
+		liikumine = "negat.";}
+	else {
+		liikumine = "posit.";}
+	
+	
+	
+	//punktiarvestus
+    myScore.text="KAADER: " + myGameArea.frameNo;
+    myScore.update();
+	myScore2.text="FINISH: " + (10000 - myGameArea.frameNo);
+	myScore2.update();
+	myScore3.text="KLIKID: " + klick2;
+	myScore3.update();
+	//myScore4.text="GRAViT.: " + myGamePiece.gravity;
+	myScore4.text="GRAViT.: " + liikumine;
+	myScore4.update();
+	myScore5.text="PUNKTID.: " + ((myGameArea.frameNo / 10) - (klick2 * 11) + (myObstacles.length * 12)).toFixed(1);
+	myScore5.update();
+	myScore6.text="TAKISTUS: " + myObstacles.length / 3;
+	myScore6.update();
+    myGamePiece.newPos();
+    myGamePiece.update();
+}
+
+
+function everyinterval(n) {
+    if ((myGameArea.frameNo / n) % 1 == 0) {return true;}
+    return false;
+}
+
+// nupuvajutus funktsioon
+function accelerate(n) {
+    myGamePiece.gravity = n;
+	klick += 1;
+	if(klick % 2 != 0)
+	{
+	klick2 += 1;
+	}
+}
+</script>
+<br>
+
+<!--NUPP-->
+<button onmousedown="accelerate(-0.2)" onmouseup="accelerate(0.05)"  class="button button5">HÜPPA</button>
+<p>Kasuta HÜPPA nuppu, et elus püsida.</p>
+</body>
+</center>
+</html>
