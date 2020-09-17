@@ -1,4 +1,4 @@
-<img src="Screenshot.png" widht="400px">
+<img src="Screenshot.png" width="400px">
 
 # Flappy-Bird-Clone-in-JS
 Flappy Bird game clone created with JavaScript, HTML, CSS
